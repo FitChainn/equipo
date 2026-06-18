@@ -35,6 +35,7 @@ public class EquipoService {
     }
 
     public List<EquipoResponseDTO> obtenerTodos() {
+        log.info("OBTENIENDO TODOS LOS EQUIPOS");
         return equipoRepository.findAll()
                 .stream()
                 .map(this::mapToDTO)
@@ -42,11 +43,12 @@ public class EquipoService {
     }
 
     public Optional<EquipoResponseDTO> obtenerPorId(Long id) {
+        log.info("BUSCANDO EQUIPO CON ID: {}", id);
         return equipoRepository.findById(id).map(this::mapToDTO);
     }
 
     public List<EquipoResponseDTO> obtenerPorEstablecimiento(Long establecimientoId) {
-        log.info("Buscando equipos del establecimiento ID: {}", establecimientoId);
+        log.info("BUSCANDO EQUIPOS DEL ESTABLECIMIENTO ID: {}", establecimientoId);
         return equipoRepository.findByEstablecimientoId(establecimientoId)
                 .stream()
                 .map(this::mapToDTO)
@@ -54,7 +56,7 @@ public class EquipoService {
     }
 
     public EquipoResponseDTO guardar(EquipoRequestDTO dto) {
-        log.info("Guardando equipo: {} de marca: {}", dto.getTipoMaquina(), dto.getMarca());
+        log.info("GUARDANDO EQUIPO: {} DE MARCA: {}", dto.getTipoMaquina(), dto.getMarca());
         Equipo equipo = new Equipo();
         equipo.setTipoMaquina(dto.getTipoMaquina());
         equipo.setMarca(dto.getMarca());
@@ -62,12 +64,12 @@ public class EquipoService {
         equipo.setEstado(dto.getEstado());
         equipo.setEstablecimientoId(dto.getEstablecimientoId());
         Equipo guardado = equipoRepository.save(equipo);
-        log.info("Equipo guardado con ID: {}", guardado.getId());
+        log.info("EQUIPO GUARDADO CON ID: {}", guardado.getId());
         return mapToDTO(guardado);
     }
 
     public EquipoResponseDTO actualizar(Long id, EquipoRequestDTO dto) {
-        log.info("Actualizando equipo con ID: {}", id);
+        log.info("ACTUALIZANDO EQUIPO CON ID: {}", id);
         Equipo equipo = equipoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Equipo no encontrado con ID: " + id));
         equipo.setTipoMaquina(dto.getTipoMaquina());
@@ -79,7 +81,7 @@ public class EquipoService {
     }
 
     public void eliminarPorId(Long id) {
-        log.info("Eliminando equipo con ID: {}", id);
+        log.info("ELIMINANDO EQUIPO CON ID: {}", id);
         equipoRepository.deleteById(id);
     }
 
@@ -87,7 +89,7 @@ public class EquipoService {
         return equipoRepository.findByEstablecimientoId(establecimientoId).size();
     }
     public Map<String, Long> contarPorTipoEnEstablecimiento(Long establecimientoId) {
-        log.info("Contando equipos por tipo en establecimiento ID: {}", establecimientoId);
+        log.info("CONTANDO EQUIPOS POR TIPO EN ESTABLECIMIENTO ID: {}", establecimientoId);
         List<Object[]> resultados = equipoRepository.contarPorTipoYEstablecimiento(establecimientoId);
         Map<String, Long> resumen = new LinkedHashMap<>();
         for (Object[] fila : resultados) {

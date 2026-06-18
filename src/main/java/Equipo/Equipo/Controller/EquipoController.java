@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Tag(name = "EQUIPOS", description = "GESTIÓN DE EQUIPOS")
 @RestController
 @RequestMapping("/v1/equipos")
@@ -32,6 +34,7 @@ public class EquipoController {
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping
     public ResponseEntity<List<EquipoResponseDTO>> obtenerTodos() {
+        log.info("GET /v1/equipos - LISTAR TODOS");
         return ResponseEntity.ok(equipoService.obtenerTodos());
     }
 
@@ -43,6 +46,7 @@ public class EquipoController {
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping("/{id}")
     public ResponseEntity<EquipoResponseDTO> obtenerPorId(@PathVariable Long id) {
+        log.info("GET /v1/equipos/{} - BUSCAR POR ID", id);
         return equipoService.obtenerPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -57,6 +61,7 @@ public class EquipoController {
     @GetMapping("/establecimiento/{establecimientoId}")
     public ResponseEntity<List<EquipoResponseDTO>> obtenerPorEstablecimiento(
             @PathVariable Long establecimientoId) {
+        log.info("GET /v1/equipos/establecimiento/{} - BUSCAR POR ESTABLECIMIENTO", establecimientoId);
         List<EquipoResponseDTO> equipos = equipoService.obtenerPorEstablecimiento(establecimientoId);
         if (equipos.isEmpty()) return ResponseEntity.noContent().build();
         return ResponseEntity.ok(equipos);
@@ -71,6 +76,7 @@ public class EquipoController {
     @GetMapping("/establecimiento/{establecimientoId}/total")
     public ResponseEntity<Map<String, Long>> contarPorEstablecimiento(
             @PathVariable Long establecimientoId) {
+        log.info("GET /v1/equipos/establecimiento/{}/total - CONTAR POR ESTABLECIMIENTO", establecimientoId);
         long total = equipoService.contarPorEstablecimiento(establecimientoId);
         return ResponseEntity.ok(Map.of("totalMaquinas", total));
     }
@@ -83,6 +89,7 @@ public class EquipoController {
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping("/establecimiento/{establecimientoId}/resumen")
     public ResponseEntity<Map<String, Long>> resumenPorTipo(@PathVariable Long establecimientoId) {
+        log.info("GET /v1/equipos/establecimiento/{}/resumen - RESUMEN POR TIPO", establecimientoId);
         return ResponseEntity.ok(equipoService.contarPorTipoEnEstablecimiento(establecimientoId));
     }
 
@@ -96,6 +103,7 @@ public class EquipoController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<EquipoResponseDTO> guardar(@Valid @RequestBody EquipoRequestDTO dto) {
+        log.info("POST /v1/equipos - CREAR EQUIPO tipo={}", dto.getTipoMaquina());
         return ResponseEntity.status(201).body(equipoService.guardar(dto));
     }
 
@@ -110,6 +118,7 @@ public class EquipoController {
     public ResponseEntity<EquipoResponseDTO> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody EquipoRequestDTO dto) {
+        log.info("PUT /v1/equipos/{} - ACTUALIZAR EQUIPO", id);
         return ResponseEntity.ok(equipoService.actualizar(id, dto));
     }
 
@@ -121,6 +130,7 @@ public class EquipoController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        log.info("DELETE /v1/equipos/{} - ELIMINAR EQUIPO", id);
         if (equipoService.obtenerPorId(id).isEmpty()) return ResponseEntity.notFound().build();
         equipoService.eliminarPorId(id);
         return ResponseEntity.noContent().build();
