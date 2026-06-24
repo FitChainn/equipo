@@ -1,5 +1,6 @@
 package Equipo.Equipo.Controller;
 
+import Equipo.Equipo.Assembler.EquipoModelAssembler;
 import Equipo.Equipo.Dto.EquipoRequestDTO;
 import Equipo.Equipo.Dto.EquipoResponseDTO;
 import Equipo.Equipo.Service.EquipoService;
@@ -10,12 +11,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Slf4j
 @Tag(name = "EQUIPOS", description = "GESTIÓN DE EQUIPOS")
@@ -26,6 +33,9 @@ public class EquipoController {
     @Autowired
     private EquipoService equipoService;
 
+    @Autowired
+    private EquipoModelAssembler assembler;
+
     @Operation(summary = "OBTENER TODOS LOS EQUIPOS", description = "Retorna la lista de todos los equipos. Acceso: ADMIN, ENTRENADOR, CLIENTE")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "LISTA OBTENIDA CON ÉXITO"),
@@ -33,9 +43,12 @@ public class EquipoController {
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping
-    public ResponseEntity<List<EquipoResponseDTO>> obtenerTodos() {
+    public ResponseEntity<CollectionModel<EntityModel<EquipoResponseDTO>>> obtenerTodos() {
         log.info("GET /v1/equipos - LISTAR TODOS");
-        return ResponseEntity.ok(equipoService.obtenerTodos());
+        List<EntityModel<EquipoResponseDTO>> equipos = equipoService.obtenerTodos().stream()
+                .map(assembler::toModel).toList();
+        return ResponseEntity.ok(CollectionModel.of(equipos,
+                linkTo(methodOn(EquipoController.class).obtenerTodos()).withSelfRel()));
     }
 
     @Operation(summary = "OBTENER EQUIPO POR ID", description = "Retorna un equipo específico por su ID. Acceso: ADMIN, ENTRENADOR, CLIENTE")
@@ -45,11 +58,11 @@ public class EquipoController {
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping("/{id}")
-    public ResponseEntity<EquipoResponseDTO> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<EquipoResponseDTO>> obtenerPorId(@PathVariable Long id) {
         log.info("GET /v1/equipos/{} - BUSCAR POR ID", id);
-        return equipoService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        EquipoResponseDTO equipo = equipoService.obtenerPorId(id)
+                .orElseThrow(() -> new NoSuchElementException("EQUIPO CON ID " + id + " NO ENCONTRADO"));
+        return ResponseEntity.ok(assembler.toModel(equipo));
     }
 
     @Operation(summary = "OBTENER EQUIPOS POR ESTABLECIMIENTO", description = "Retorna todos los equipos de un establecimiento. Acceso: ADMIN, ENTRENADOR, CLIENTE")
@@ -59,12 +72,13 @@ public class EquipoController {
     })
     @PreAuthorize("hasAnyRole('ADMIN', 'ENTRENADOR', 'CLIENTE')")
     @GetMapping("/establecimiento/{establecimientoId}")
-    public ResponseEntity<List<EquipoResponseDTO>> obtenerPorEstablecimiento(
+    public ResponseEntity<CollectionModel<EntityModel<EquipoResponseDTO>>> obtenerPorEstablecimiento(
             @PathVariable Long establecimientoId) {
         log.info("GET /v1/equipos/establecimiento/{} - BUSCAR POR ESTABLECIMIENTO", establecimientoId);
-        List<EquipoResponseDTO> equipos = equipoService.obtenerPorEstablecimiento(establecimientoId);
-        if (equipos.isEmpty()) return ResponseEntity.noContent().build();
-        return ResponseEntity.ok(equipos);
+        List<EntityModel<EquipoResponseDTO>> equipos = equipoService.obtenerPorEstablecimiento(establecimientoId)
+                .stream().map(assembler::toModel).toList();
+        return ResponseEntity.ok(CollectionModel.of(equipos,
+                linkTo(methodOn(EquipoController.class).obtenerPorEstablecimiento(establecimientoId)).withSelfRel()));
     }
 
     @Operation(summary = "CONTAR EQUIPOS POR ESTABLECIMIENTO", description = "Retorna el total de equipos de un establecimiento. Acceso: ADMIN, ENTRENADOR, CLIENTE")
@@ -102,9 +116,9 @@ public class EquipoController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<EquipoResponseDTO> guardar(@Valid @RequestBody EquipoRequestDTO dto) {
+    public ResponseEntity<EntityModel<EquipoResponseDTO>> guardar(@Valid @RequestBody EquipoRequestDTO dto) {
         log.info("POST /v1/equipos - CREAR EQUIPO tipo={}", dto.getTipoMaquina());
-        return ResponseEntity.status(201).body(equipoService.guardar(dto));
+        return ResponseEntity.status(201).body(assembler.toModel(equipoService.guardar(dto)));
     }
 
     @Operation(summary = "ACTUALIZAR EQUIPO", description = "Actualiza un equipo existente. Acceso: ADMIN")
@@ -115,11 +129,11 @@ public class EquipoController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<EquipoResponseDTO> actualizar(
+    public ResponseEntity<EntityModel<EquipoResponseDTO>> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody EquipoRequestDTO dto) {
         log.info("PUT /v1/equipos/{} - ACTUALIZAR EQUIPO", id);
-        return ResponseEntity.ok(equipoService.actualizar(id, dto));
+        return ResponseEntity.ok(assembler.toModel(equipoService.actualizar(id, dto)));
     }
 
     @Operation(summary = "ELIMINAR EQUIPO", description = "Elimina un equipo por su ID. Acceso: ADMIN")
@@ -129,10 +143,11 @@ public class EquipoController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+    public ResponseEntity<EntityModel<EquipoResponseDTO>> eliminar(@PathVariable Long id) {
         log.info("DELETE /v1/equipos/{} - ELIMINAR EQUIPO", id);
-        if (equipoService.obtenerPorId(id).isEmpty()) return ResponseEntity.notFound().build();
+        EquipoResponseDTO equipo = equipoService.obtenerPorId(id)
+                .orElseThrow(() -> new NoSuchElementException("EQUIPO CON ID " + id + " NO ENCONTRADO"));
         equipoService.eliminarPorId(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(assembler.toModel(equipo));
     }
 }
